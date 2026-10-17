@@ -20,6 +20,12 @@ try:
         rgb = np.asanyarray(frames.get_color_frame().get_data())
         depth = np.asanyarray(frames.get_depth_frame().get_data())  # uint16, millimetres
 
+        # The camera is mounted upside down: rotate RGB and depth by 180°.
+        # Recordings must do the same, e.g. in LeRobot: RealSenseCameraConfig(..., rotation=Cv2Rotation.ROTATE_180)
+        # (CLI: --robot.cameras='{... rotation: 180 ...}').
+        rgb = cv2.rotate(rgb, cv2.ROTATE_180)
+        depth = cv2.rotate(depth, cv2.ROTATE_180)
+
         depth_color = cv2.applyColorMap(cv2.convertScaleAbs(depth, alpha=255 / 2000), cv2.COLORMAP_JET)  # 0-2 m
         cv2.imshow("RealSense", np.hstack([rgb, depth_color]))
         if cv2.waitKey(1) == ord("q"):
