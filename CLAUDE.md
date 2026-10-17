@@ -12,14 +12,14 @@ Bimanual OpenArm (Enactic, v10) that grasps a bottle and a glass, stops in a fix
   joint_3-4 DM4340, joint_5-7 DM4310, gripper DM4310. Send IDs 0x01-0x08, feedback 0x11-0x18.
 - CAN: PEAK PCAN-USB Pro FD (2 channels, one arm each), CAN FD 1 Mbps / 5 Mbps, sample point 0.75.
 - On macOS only CAN1 works (PCBUSB driver limit), so robot work happens in the Ubuntu VM
-  (VMware Fusion, USB passthrough, `peak_usb` → `can0`, `can1`).
+  (UTM/QEMU, aarch64, USB passthrough, `peak_usb` → `can0`, `can1`).
 
 ## Code
 - Environment: `uv sync` (Python 3.12, LeRobot pinned to a tested commit in `pyproject.toml`).
   Run tools with `uv run`, e.g. `uv run lerobot-calibrate ...`.
-- `hardware/damiao.py`: minimal Damiao protocol (ported from enactic/openarm_can) over python-can.
-- `scripts/read_joints.py`: read-only state dump, never enables torque.
-- `scripts/calibrate_zero.py`: zero calibration without torque (needs typed confirmation).
+- `scripts/realsense_preview.py`: RealSense D455 RGB + depth preview with OpenCV.
+  `opencv-python-headless` (from LeRobot) is overridden in `pyproject.toml` so `cv2.imshow` works.
+- `lerobot-setup-can --mode=test` is NOT read-only (sends enable to every motor).
 - Preferred stack for real use: LeRobot `openarm_follower` / `bi_openarm_follower` with socketcan.
 
 ## Safety rules (from the user)
