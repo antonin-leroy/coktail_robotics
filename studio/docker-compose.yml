@@ -1,0 +1,31 @@
+# Local dev infrastructure for Skill Studio: Postgres (runs, metrics, skills, job queues)
+# and RustFS (S3 cache for transcoded camera previews, e.g. depth). Training runs on HF Jobs.
+# The backend creates the S3 bucket on startup.
+name: skill-studio
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: studio
+      POSTGRES_DB: studio
+    ports: ["5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studio"]
+      interval: 2s
+      retries: 20
+
+  rustfs:
+    image: rustfs/rustfs:1.0.3
+    environment:
+      RUSTFS_ACCESS_KEY: studio
+      RUSTFS_SECRET_KEY: studio-secret
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [s3data:/data]
+
+volumes:
+  pgdata:
+  s3data:

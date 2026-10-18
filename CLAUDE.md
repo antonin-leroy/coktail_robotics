@@ -21,6 +21,9 @@ Bimanual OpenArm (Enactic, v10) that grasps a bottle and a glass, stops in a fix
   `opencv-python-headless` (from LeRobot) is overridden in `pyproject.toml` so `cv2.imshow` works.
 - `lerobot-setup-can --mode=test` is NOT read-only (sends enable to every motor).
 - Preferred stack for real use: LeRobot `openarm_follower` / `bi_openarm_follower` with socketcan.
+- `studio/`: Skill Studio web app (FastAPI + worker in its own uv project, Vite/React/shadcn UI,
+  Postgres + RustFS via docker compose) to browse Hub datasets and fine-tune ACT/SmolVLA/π0.5 on
+  HF Jobs. See `studio/README.md`. `STUDIO_FAKE_JOBS=1` simulates jobs (no GPU, no cost).
 
 ## Safety rules (from the user)
 - Never command motion or enable torque without the user's explicit go for that specific step.

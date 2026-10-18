@@ -1,0 +1,27 @@
+[project]
+name = "studio-backend"
+version = "0.1.0"
+description = "Skill Studio API: browse LeRobot datasets on the Hub, fine-tune on HF Jobs, track runs in Postgres"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "psycopg[binary,pool]>=3.2",
+    "huggingface-hub>=1.33",
+    "httpx>=0.28",
+    "pyarrow>=18",
+    "numpy>=2",
+    "av>=14",
+    "boto3>=1.35",
+    "pillow>=11",
+    "pydantic-settings>=2.6",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
