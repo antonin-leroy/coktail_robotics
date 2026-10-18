@@ -8,8 +8,12 @@ venv/
 data/*.db
 data/*.db-journal
 *.mp4
+# Dataset preview clips ship with the repo so previews work on a fresh clone:
+# all from Apache-2.0 / MIT datasets, sources in data/clip_sources.json.
+!app/static/clips/*.mp4
+# Landing-page videos from Daidai Labs (daidailabs.com), included with their permission.
+!app/static/landing/assets/optimized/*.mp4
 checkpoints/
-app/static/thumbs/*.jpg
 API.txt
 data/*.db-shm
 data/*.db-wal

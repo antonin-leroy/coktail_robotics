@@ -19,6 +19,7 @@ from pydantic import BaseModel, StringConstraints
 from . import catalog as cat
 from . import db
 from . import props as propgen
+from . import snapshot
 from .bidding import BidParams, bids
 from .compiler import CompileError, cache_key, compile_plan
 from .models import CompiledPlan, MissingSkill, PlanResponse, RunReport, Step
@@ -63,6 +64,11 @@ def _startup() -> None:
     # enough. Composed skills are kept.
     n = db.seed_skills()
     print(f"seeded {n} skills")
+    # Cached demo plans, props, benchmark and demand for a fresh clone.
+    if os.environ.get("SKILLSTORE_DEMO", "1") != "0":
+        added = snapshot.load()
+        if added:
+            print(f"loaded demo snapshot: {added}")
 
 
 # --------------------------------------------------------------------------

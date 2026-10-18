@@ -24,6 +24,14 @@ set -a && . ./.env && set +a
 .venv/bin/uvicorn app.api:app --reload --port 8000
 ```
 
+**Demo without a key.** On first start the server loads `data/demo_snapshot.json`:
+cached plans for 15 demo prompts (the four example chips, tea, painting, piña
+colada, plant pot, toy car, stacking cups, towel, apples, mojito, vase, glass of
+water — on Spirit AI Moz1), their designed 3D props, and the benchmark, demand,
+admin, ratings and composed skills. Those prompts compile instantly with no API
+key; any other prompt needs one. Re-export with `python tools/demo_snapshot.py`
+after compiling new demo prompts; `SKILLSTORE_DEMO=0` starts without it.
+
 **Model provider.** `app/llm.py` takes either OpenAI or Anthropic; whichever key is
 present wins, or force it with `LLM_PROVIDER`. Default model is `gpt-4.1-mini`;
 `COMPILER_ACT_MODEL` can give stage 1 (below) a stronger one.

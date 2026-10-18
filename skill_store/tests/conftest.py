@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 _tmp = tempfile.mkdtemp(prefix="skillstore-test-")
 os.environ["SKILLSTORE_DB"] = str(Path(_tmp) / "test.db")
 os.environ.setdefault("ROBOT_SHARED_SECRET", "test-secret")
+os.environ["SKILLSTORE_DEMO"] = "0"
 
 import pytest  # noqa: E402
 
