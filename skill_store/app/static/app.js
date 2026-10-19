@@ -1272,6 +1272,7 @@ async function openDetail(skillId) {
   body.appendChild(mrow("Accuracy", d.success_rate == null
     ? "no runs logged on " + robot()
     : Math.round(d.success_rate * 100) + "% over " + d.n_trials + " trials on " + robot()));
+  if (d.rating) body.appendChild(mrow("Customer rating", ratingBlock(skillId, d.rating)));
   if (d.by_robot && d.by_robot.length) {
     body.appendChild(mrow("Per robot", d.by_robot
       .map((x) => `${x.robot_model}: ${Math.round(x.success_rate * 100)}% (n=${x.n_trials})`)
@@ -1550,6 +1551,113 @@ function partName(id) {
   return m ? m.name : id;
 }
 
+/* ---------------- customer ratings ---------------- */
+/* Stars shown as a filled overlay over five outlines, so 4.3 reads as 4.3. */
+function starsEl(avg, count, cls) {
+  const wrap = el("span", "stars" + (cls ? " " + cls : ""));
+  if (avg == null) {
+    wrap.appendChild(el("span", "stars-none", "No ratings yet"));
+    return wrap;
+  }
+  const bar = el("span", "stars-bar");
+  bar.setAttribute("role", "img");
+  bar.setAttribute("aria-label", `${avg.toFixed(1)} out of 5 stars`);
+  bar.appendChild(el("span", "stars-bg", "★★★★★"));
+  const fill = el("span", "stars-fill", "★★★★★");
+  fill.style.width = (avg / 5 * 100).toFixed(1) + "%";
+  bar.appendChild(fill);
+  wrap.appendChild(bar);
+  wrap.appendChild(el("span", "stars-num", avg.toFixed(1)));
+  wrap.appendChild(el("span", "stars-count", `(${count})`));
+  return wrap;
+}
+
+/* The popup's rating section: average, how many of each star, the newest
+   reviews, and a form to add one. Re-renders itself after a submit. */
+function ratingBlock(skillId, r) {
+  const box = el("div", "rating");
+  const head = el("div", "rating-head");
+  head.appendChild(el("div", "rating-avg", r.avg == null ? "–" : r.avg.toFixed(1)));
+  const hs = el("div");
+  hs.appendChild(starsEl(r.avg, r.count, "big"));
+  hs.appendChild(el("div", "m-sub", r.count === 1 ? "1 review" : `${r.count} reviews`));
+  head.appendChild(hs);
+  box.appendChild(head);
+
+  const hist = el("div", "rating-hist");
+  const max = Math.max(1, ...r.histogram);
+  r.histogram.forEach((n, i) => {
+    const row = el("div", "hist-row");
+    row.appendChild(el("span", "hist-label", `${5 - i}★`));
+    const track = el("span", "hist-track");
+    const fill = el("span", "hist-fill");
+    fill.style.width = (n / max * 100).toFixed(1) + "%";
+    track.appendChild(fill);
+    row.appendChild(track);
+    row.appendChild(el("span", "hist-n", String(n)));
+    hist.appendChild(row);
+  });
+  box.appendChild(hist);
+
+  if (r.samples) {
+    box.appendChild(el("div", "rating-sample",
+      `${r.samples} of these are sample reviews, seeded for the demo.`));
+  }
+  const list = el("div", "rating-list");
+  r.reviews.forEach((v) => {
+    const item = el("div", "review");
+    const top = el("div", "review-top");
+    top.appendChild(starsEl(v.stars, 0, "small"));
+    top.appendChild(el("span", "review-who",
+      `${v.author} · ${v.robot_model} · ${v.created_at.slice(0, 10)}`));
+    if (v.sample) top.appendChild(el("span", "review-tag", "sample"));
+    item.appendChild(top);
+    if (v.comment) item.appendChild(el("div", "review-text", v.comment));
+    list.appendChild(item);
+  });
+  box.appendChild(list);
+
+  const form = el("form", "review-form");
+  form.appendChild(el("div", "review-form-title", `Rate this skill on ${robot()}`));
+  const pick = el("div", "star-pick");
+  pick.setAttribute("role", "radiogroup");
+  pick.setAttribute("aria-label", "Stars");
+  // Built 5..1 and shown reversed, so "this star and every one before it" lights
+  // up with a plain sibling selector.
+  for (let k = 5; k >= 1; k--) {
+    const id = `rv-star-${k}`;
+    const input = el("input"); input.type = "radio"; input.name = "rv-stars";
+    input.id = id; input.value = String(k); if (k === 5) input.checked = true;
+    const label = el("label", null, "★"); label.htmlFor = id;
+    label.title = `${k} star${k > 1 ? "s" : ""}`;
+    pick.append(input, label);
+  }
+  form.appendChild(pick);
+  const comment = el("textarea"); comment.id = "rv-comment"; comment.maxLength = 500;
+  comment.placeholder = "What worked, what did not? (optional)"; comment.rows = 2;
+  const author = el("input"); author.id = "rv-author"; author.maxLength = 40;
+  author.placeholder = "Your name or team (optional)";
+  const send = el("button", "cta small", "Post rating"); send.type = "submit";
+  form.append(comment, author, send);
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    send.disabled = true;
+    try {
+      const stars = Number(form.querySelector("input[name=rv-stars]:checked").value);
+      const next = await postJSON(`/api/skills/${encodeURIComponent(skillId)}/reviews`, {
+        stars, comment: comment.value, author: author.value, robot_model: robot() });
+      box.replaceWith(ratingBlock(skillId, next));
+      const s = catalogCache.find((x) => x.id === skillId);
+      if (s) { s.rating = { avg: next.avg, count: next.count }; drawCatalog(); }
+    } catch (e) {
+      showError("Could not post the rating: " + e.message);
+      send.disabled = false;
+    }
+  });
+  box.appendChild(form);
+  return box;
+}
+
 function combiCard(s) {
   const card = el("div", "card combi");
   card.style.setProperty("--c", "#FF4D0D");
@@ -1557,6 +1665,7 @@ function combiCard(s) {
   const b = el("div", "body");
   b.appendChild(el("h4", null, s.name));
   b.appendChild(el("div", "sub", s.title || ""));
+  b.appendChild(starsEl((s.rating || {}).avg ?? null, (s.rating || {}).count || 0));
 
   const parts = s.composed_of || [];
   const chain = el("div", "combi-chain");
@@ -1600,6 +1709,7 @@ function atomCard(s) {
   const b = el("div", "body");
   b.appendChild(el("h4", null, s.name));
   b.appendChild(el("div", "sub", s.title));
+  b.appendChild(starsEl((s.rating || {}).avg ?? null, (s.rating || {}).count || 0));
   const av = el("div", "avail " + a.cls);
   av.appendChild(el("i")); av.appendChild(document.createTextNode(a.label));
   b.appendChild(av);

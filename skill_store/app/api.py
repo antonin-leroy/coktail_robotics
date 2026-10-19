@@ -14,7 +14,7 @@ from typing import Annotated, Any, Literal
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints
 
 from . import catalog as cat
 from . import db
@@ -91,6 +91,7 @@ def list_skills(robot_model: str = DEFAULT_ROBOT) -> dict[str, Any]:
     catalog = cat.load_catalog()
     rates = cat.success_rates(robot_model)
     per_robot = cat.rates_by_robot()
+    stars = cat.ratings()
     skills = []
     for sid in sorted(catalog):
         s = dict(catalog[sid])
@@ -102,6 +103,7 @@ def list_skills(robot_model: str = DEFAULT_ROBOT) -> dict[str, Any]:
         s["availability"] = avail
         s["dataset_name"] = (ds or {}).get("name", "")
         s["dataset_count"] = len(cat.skill_datasets(s))
+        s["rating"] = stars.get(sid, {"avg": None, "count": 0})
         skills.append(s)
     return {"robot_model": robot_model, "count": len(skills), "skills": skills}
 
@@ -137,7 +139,25 @@ def skill_detail(skill_id: str, robot_model: str = DEFAULT_ROBOT) -> dict[str, A
         # caption names the footage actually shown.
         **_skill_clip(skill),
         "usage": dict(used_by[0]) if used_by else {"plans": 0, "runs": 0},
+        "rating": cat.rating_detail(skill_id),
     }
+
+
+class ReviewRequest(BaseModel):
+    stars: Annotated[int, Field(ge=1, le=5)]
+    comment: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] = ""
+    author: Annotated[str, StringConstraints(strip_whitespace=True, max_length=40)] = ""
+    robot_model: Annotated[str, StringConstraints(strip_whitespace=True, max_length=60)] = DEFAULT_ROBOT
+
+
+@app.post("/api/skills/{skill_id}/reviews")
+def add_review(skill_id: str, req: ReviewRequest) -> dict[str, Any]:
+    """Rate a skill, 1-5 stars with an optional comment. Returns the new summary."""
+    if skill_id not in cat.load_catalog():
+        raise HTTPException(404, "no such skill")
+    cat.add_review(skill_id, req.robot_model or DEFAULT_ROBOT, req.stars,
+                   req.author or "Anonymous", req.comment)
+    return cat.rating_detail(skill_id)
 
 
 class CompileRequest(BaseModel):

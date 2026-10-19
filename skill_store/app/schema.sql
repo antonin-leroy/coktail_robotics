@@ -60,3 +60,19 @@ CREATE TABLE IF NOT EXISTS props (
     spec_json     TEXT NOT NULL,
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Customer ratings: 1-5 stars and a short review per skill. This is what buyers
+-- say, next to -- never instead of -- the measured success rate from `runs`.
+-- `sample` marks seeded demo reviews (tools/seed_reviews.py) so they can be told
+-- apart from real ones and removed in one go.
+CREATE TABLE IF NOT EXISTS reviews (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    skill_id      TEXT NOT NULL,
+    robot_model   TEXT NOT NULL,
+    stars         INTEGER NOT NULL CHECK (stars BETWEEN 1 AND 5),
+    author        TEXT NOT NULL,
+    comment       TEXT NOT NULL DEFAULT '',
+    sample        INTEGER NOT NULL DEFAULT 0,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS reviews_skill ON reviews (skill_id);

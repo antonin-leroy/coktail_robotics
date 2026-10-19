@@ -107,6 +107,40 @@ def benchmark(robot_model: str | None = None) -> list[dict[str, Any]]:
     return out
 
 
+def ratings() -> dict[str, dict[str, Any]]:
+    """{skill_id: {"avg", "count"}} -- customer star ratings, for the catalog cards."""
+    rows = db.query("SELECT skill_id, AVG(stars) AS avg, COUNT(*) AS n "
+                    "FROM reviews GROUP BY skill_id")
+    return {r["skill_id"]: {"avg": round(float(r["avg"]), 2), "count": int(r["n"])}
+            for r in rows}
+
+
+def rating_detail(skill_id: str, latest: int = 6) -> dict[str, Any]:
+    """Average, how many of each star, and the newest reviews for one skill."""
+    hist = {int(r["stars"]): int(r["n"]) for r in db.query(
+        "SELECT stars, COUNT(*) AS n FROM reviews WHERE skill_id = ? GROUP BY stars",
+        (skill_id,))}
+    count = sum(hist.values())
+    reviews = db.query(
+        """SELECT stars, author, robot_model, comment, sample, created_at FROM reviews
+           WHERE skill_id = ? ORDER BY created_at DESC, id DESC LIMIT ?""",
+        (skill_id, latest))
+    return {
+        "avg": round(sum(k * v for k, v in hist.items()) / count, 2) if count else None,
+        "count": count,
+        "histogram": [hist.get(k, 0) for k in (5, 4, 3, 2, 1)],
+        "samples": int(db.query("SELECT COUNT(*) AS n FROM reviews WHERE skill_id = ? "
+                                "AND sample = 1", (skill_id,))[0]["n"]),
+        "reviews": [{**dict(r), "sample": bool(r["sample"])} for r in reviews],
+    }
+
+
+def add_review(skill_id: str, robot_model: str, stars: int, author: str,
+               comment: str) -> None:
+    db.execute("INSERT INTO reviews (skill_id, robot_model, stars, author, comment) "
+               "VALUES (?,?,?,?,?)", (skill_id, robot_model, stars, author, comment))
+
+
 def rates_by_robot() -> dict[str, list[dict[str, Any]]]:
     """Per-skill breakdown across every robot that has run it."""
     rows = db.query(
