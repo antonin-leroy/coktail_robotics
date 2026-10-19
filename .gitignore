@@ -19,3 +19,6 @@
 
 # Local CAN drivers (PCBUSB, downloaded separately)
 drivers/
+
+# Raw demo video (121 MB, over the GitHub limit); the compressed copy is media/cocktail.mp4
+/COKTAIL.mp4
